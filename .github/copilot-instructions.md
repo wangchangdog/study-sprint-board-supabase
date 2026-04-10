@@ -1,49 +1,32 @@
 # Copilot Instructions
 
-## このリポジトリの設計思想
+## この repo の前提
 
-このリポジトリは、BaaS 構成を学ぶための教育用見本です。`study-sprint-board-next-monorepo` と同じ題材を使い、構成の違いを比較できるようにしています。
+この repo は `Study Sprint Board` の **Supabase 委譲見本** です。自作 API を中心にした repo ではありません。UI は repository 境界越しに demo 実装または Supabase 実装へ接続します。
 
-「動くコード」だけでなく、「何を Supabase に委譲し、何をアプリ側に残すか」を説明できることを重視します。
+## 実行コマンド
 
-## リポジトリ運用方針
+| 目的 | コマンド |
+| --- | --- |
+| lint | `pnpm lint` |
+| typecheck | `pnpm typecheck` |
+| テスト一式 | `pnpm test` |
+| 単体テスト 1 ファイル | `pnpm test -- src/lib/repository.test.ts` |
+| build | `pnpm build` |
+| E2E 一式 | `pnpm e2e` |
+| E2E 1 ファイル | `pnpm e2e -- tests/e2e/app.spec.ts` |
 
-- アプリ本体は `src/` に配置する
-- 契約の正本は `supabase/migrations/`, `src/types/database.types.ts`, `docs/rls/policies.md`
-- demo モードと supabase モードの差分を README / docs に残す
-- 小さな差分で進める
+## 高レベルアーキテクチャ
 
-## コーディング方針
+- `src/lib/repository.ts` が `env.enableSupabase` を見て demo / Supabase 実装を切り替えます。
+- UI は `routes/`, `features/`, `components/` にあり、Supabase SDK を直接叩かず repository 境界越しにデータへ触れます。
+- 契約の中心は OpenAPI ではなく、`supabase/migrations/0001_initial.sql`、`src/types/database.types.ts`、`docs/rls/policies.md` です。
+- `docs/rls/policies.md` は SQL の補足であり、RLS の意図や UI ガードとの責務差を説明するためにあります。
 
-### 型安全を優先する
+## 重要な規約
 
-- TypeScript strict mode を維持する
-- `any` を避ける
-- フォーム入力は Zod で検証する
-- generated types を優先し、手書き型を重複させない
-
-### UI とデータアクセスの分離
-
-- 画面コンポーネントから直接 Supabase を呼ばない
-- `lib/repository.ts` を境界にし、UI は repository に依存する
-- demo と supabase の両実装を壊さない
-
-### RLS を前提に考える
-
-- 「画面で見せない」だけで安全になったと思わない
-- 権限制御は docs と migration の両方を更新する
-- 設定画面や admin 導線では、UI ガードと RLS の違いを説明可能に保つ
-
-## ドキュメント方針
-
-- docs と実装を同時に更新する
-- BaaS 構成の正本がどこにあるかを README / architecture / setup に明記する
-- 標準見本との比較を壊さない
-
-## 変更後の確認
-
-- `pnpm lint`
-- `pnpm typecheck`
-- `pnpm test`
-- `pnpm build`
-- 画面導線を変えたら `pnpm e2e`
+- UI から直接 Supabase クライアントを呼ばないでください。
+- demo モードと supabase モードの両方で成立する設計を保ち、どちらか一方だけを壊す変更を避けます。
+- 権限やテーブル構造を変えるときは、migration SQL と generated types と RLS docs を同時に更新します。
+- generated types を優先し、同じ概念の手書き型を増やしすぎないでください。
+- OpenAPI 前提の説明を持ち込まず、BaaS 構成の正本を明示してください。

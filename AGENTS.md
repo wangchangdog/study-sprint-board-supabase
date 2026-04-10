@@ -2,45 +2,51 @@
 
 ## このリポジトリについて
 
-このリポジトリは **教育用の見本プロジェクト** です。`study-sprint-board-next-monorepo` と同じ Study Sprint Board を、**Vite + React + Supabase** の BaaS 構成で再実装した比較教材として作成されています。
+このリポジトリは `Study Sprint Board` の **Vite + React + Supabase 見本** です。標準見本のように自作 API を中心にするのではなく、**認証・DB・認可を Supabase に委譲する** ことが主題です。
 
-## 基本方針
+- 主な変更対象は `src/` と `supabase/`
+- demo モードと supabase モードの両方を説明できる構造を保ちます
+- OpenAPI ではなく、migration SQL・generated types・RLS docs が契約の中心です
 
-- `src/` を中心に変更する
-- 複雑さを増やしすぎず、初学者が責務を追える構成を保つ
-- 破壊的変更を避ける
-- demo モードと supabase モードの差分を明示する
-- 過度な抽象化をせず、BaaS では何が契約の正本になるかを見える形にする
+## まず確認するファイル
 
-## コマンド実行前後に確認すること
+| 目的 | ファイル |
+| --- | --- |
+| 全体像 | `README.md`, `docs/architecture.md` |
+| セットアップ | `docs/setup.md` |
+| repository 境界 | `src/lib/repository.ts`, `.github/instructions/web.instructions.md` |
+| 認可と契約 | `supabase/migrations/0001_initial.sql`, `src/types/database.types.ts`, `docs/rls/policies.md` |
+| 領域別の詳細ルール | `.github/instructions/docs.instructions.md`, `.github/instructions/ci.instructions.md` |
 
-- `.env` / `.env.example` の設定差分
-- `supabase/migrations/` と `src/types/database.types.ts` の整合
-- `docs/` の説明と実装の一致
-- demo モードと supabase モードの動作差分
+## 実行コマンド
 
-## 基本検証コマンド
+| 目的 | コマンド |
+| --- | --- |
+| 開発サーバー | `pnpm dev` |
+| lint | `pnpm lint` |
+| typecheck | `pnpm typecheck` |
+| テスト一式 | `pnpm test` |
+| 単体テスト 1 ファイル | `pnpm test -- src/lib/repository.test.ts` |
+| build | `pnpm build` |
+| E2E 一式 | `pnpm e2e` |
+| E2E 1 ファイル | `pnpm e2e -- tests/e2e/app.spec.ts` |
 
-```bash
-pnpm lint
-pnpm typecheck
-pnpm test
-pnpm build
-pnpm e2e
-```
+## 高レベルアーキテクチャ
 
-## 変更後の検証手順
+- UI は `routes/`, `features/`, `components/` に分かれ、データ取得や状態同期は `src/lib/repository.ts` を起点にします。
+- `src/lib/repository.ts` は `env.enableSupabase` を見て demo 実装と Supabase 実装を切り替えます。UI は `BoardRepository` にだけ依存します。
+- Supabase 実装では Auth / PostgreSQL / RLS を使い、demo 実装では localStorage を使います。画面側に mode ごとの実装詳細を漏らしません。
 
-1. 変更対象のコードと docs を特定する
-2. 契約ファイル（`supabase/migrations/`, `src/types/database.types.ts`, `docs/rls/policies.md`）を確認する
-3. 実装を更新する
-4. `pnpm lint && pnpm typecheck && pnpm test && pnpm build` を実行する
-5. UI 導線を変えた場合は `pnpm e2e` も実行する
-6. docs を更新し、コードと説明のずれがないことを確認する
+| 正本 | 役割 |
+| --- | --- |
+| `supabase/migrations/0001_initial.sql` | スキーマと認可条件の機械可読な正本 |
+| `src/types/database.types.ts` | 生成済み DB 型の正本 |
+| `docs/rls/policies.md` | RLS 意図の人間向け補足 |
 
-## 禁止事項
+## この repo で重要な約束
 
-- `team-dev-curriculum/` は参照専用。ここから勝手に編集しない
-- 契約ファイルと実装をずらさない
-- demo モードでだけ動く変更を、supabase モードの説明なしに入れない
-- 実行確認なしで完了扱いにしない
+- UI から直接 Supabase クライアントを呼ばず、`src/lib/repository.ts` 配下にデータアクセスを閉じ込めます。
+- demo モードでだけ成立する変更を入れず、supabase モードとの差分を README / docs に残します。
+- UI ガードは導線制御、RLS はデータベース保護という別責務です。権限を変えたら SQL と `docs/rls/policies.md` を同時に更新します。
+- migration を変更したら generated types も更新します。例: `supabase gen types typescript --local > src/types/database.types.ts`
+- Vitest は 100% coverage 閾値を前提にしているため、demo / supabase の両実装を跨ぐ境界テストを削らないでください。
